@@ -18,8 +18,9 @@ var ccdjobHandler =
           var _ids = getNode(_identity, "ids")
           var _raft = getMessageTagContents(_ids,"raft")
           var _sensor = getMessageTagContents(_ids,"sensor")
-          var _visit = getMessageTagContents(_ids,"visit")
-          
+          var _visit_raw = getMessageTagContents(_ids,"visit")
+          var _runid = getMessageTagContents(message, "RUNID")
+          var _visit = "Run: "+_runid+" Visit: "+_visit_raw
           // only change the display header if this is the first time through
           if (_displayedVisitId == null) {
             _displayedVisitId = _visit;
@@ -60,6 +61,20 @@ var ccdjobHandler =
                         _cell.className = _state
                     updateVisitInfo(_visit, _cellname, _state)
                 }
+            } else if (_status == "job:rescheduling") {
+                var _identity = getNode(message, "identity")
+                var _ids = getNode(_identity, "ids")
+                var _raft = getMessageTagContents(_ids,"raft")
+                var _sensor = getMessageTagContents(_ids,"sensor")
+                var _visit_raw = getMessageTagContents(_ids,"visit")
+                var _runid = getMessageTagContents(message, "RUNID")
+                var _visit = "Run: "+_runid+" Visit: "+_visit_raw
+
+                var _cellname = _raft+"_"+_sensor
+                var _cell = document.getElementById(_cellname)
+                if (_displayedVisitId == _visit)
+                    _cell.className = "rescheduling"
+                updateVisitInfo(_visit,_cellname, "rescheduling")
             }
       }
     }
@@ -103,7 +118,9 @@ function getVisitId(message) {
 }
 
 function updateVisit(message) {
-    var _visit = getVisitId(message)
+    var _runid = getMessageTagContents(message, "RUNID")
+    var _visit_raw = getVisitId(message)
+    var _visit = "Run: "+_runid+" Visit: "+_visit_raw
     var list = document.visits.list
 
     var _table = visits[_visit]

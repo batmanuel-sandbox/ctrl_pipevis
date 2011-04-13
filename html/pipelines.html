@@ -5,22 +5,12 @@
 <script type="text/javascript">amq.uri='../amq';</script>
 <script type="text/javascript" src="pipelines.js"></script>
 <script type="text/javascript" src="grid.js"></script>
-<style>
-      .pipelines                { border: 1px solid black; }
-      .pipelines td, .pipelines th { width: 250; text-align: right; }
-      .grid                   { padding: 1px; width: 100px; height=100px; border: 0px 
-solid black; }
-      .grid td, .grid th { width: 25px; text-align: right; }
-      .border_grid                   { padding: 1px; width:100px; height=100px; border : 1px solid black; }
-      .border_grid td, .border_grid th { border: 1px solid black; width: 25px; text-align: right; }
-      .border_grid .run            { background-color: #0f0; }
-      .border_grid .done          { background-color: #000; }
-      .border_grid .fail          { background-color: #f00; }
-</style>
+<link rel="stylesheet" type="text/css" href="style.css" media="all" />
 
 </head>
 <body>
 <TABLE cellpadding="10">
+
 <TR>
 <TH>
 Visits
@@ -29,12 +19,31 @@ Visits
 Focal Plane
 </TH>
 </TR>
+
 <TR>
+
 <TD valign=top>
+<table>
+
+<tr>
+<td>
 <form name="visits">
-<select name="list" size="10" style="width: 150px" onClick="updateDisplay(this.options[this.options.selectedIndex].value)">
+<select name="list" size="10" style="width: 250px" onClick="updateDisplay(this.options[this.options.selectedIndex].value)">
 </select>
 </form>
+</td>
+</tr>
+
+<tr>
+<td><table class="border_grid">
+<tr><th>State</th><th>Key</th></tr>
+<tr><td>Running</td><td class="run"><br></td></tr>
+<tr><td>Failed</td><td class="fail"><br></td></tr>
+<tr><td>Rescheduled</td><td class="rescheduling"><br></td></tr>
+<tr><td>Completed</td><td class="done"><br></td></tr>
+</table></td>
+</tr>
+</table>
 </TD>
 <TD>
 <div id="focalplane">
@@ -46,6 +55,7 @@ document.write(table_var)
 </div.
 </TD>
 </TR>
+
 </TABLE>
 </body>
 </html>
