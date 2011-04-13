@@ -1,0 +1,51 @@
+<html>
+<head>
+<title>Job Office Information</title>
+<script type="text/javascript" src="../amq/amq.js"></script>
+<script type="text/javascript">amq.uri='../amq';</script>
+<script type="text/javascript" src="pipelines.js"></script>
+<script type="text/javascript" src="grid.js"></script>
+<style>
+      .pipelines                { border: 1px solid black; }
+      .pipelines td, .pipelines th { width: 250; text-align: right; }
+      .grid                   { padding: 1px; width: 100px; height=100px; border: 0px 
+solid black; }
+      .grid td, .grid th { width: 25px; text-align: right; }
+      .border_grid                   { padding: 1px; width:100px; height=100px; border : 1px solid black; }
+      .border_grid td, .border_grid th { border: 1px solid black; width: 25px; text-align: right; }
+      .border_grid .run            { background-color: #0f0; }
+      .border_grid .done          { background-color: #000; }
+      .border_grid .fail          { background-color: #f00; }
+</style>
+
+</head>
+<body>
+<TABLE cellpadding="10">
+<TR>
+<TH>
+Visits
+</TH>
+<TH id="visitHeaderName">
+Focal Plane
+</TH>
+</TR>
+<TR>
+<TD valign=top>
+<form name="visits">
+<select name="list" size="10" style="width: 150px" onClick="updateDisplay(this.options[this.options.selectedIndex].value)">
+</select>
+</form>
+</TD>
+<TD>
+<div id="focalplane">
+<SCRIPT LANGAUGE="JavaScript">
+<!--
+document.write(table_var)
+//-->
+</SCRIPT>
+</div.
+</TD>
+</TR>
+</TABLE>
+</body>
+</html>
