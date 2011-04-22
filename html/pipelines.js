@@ -178,13 +178,12 @@ function updateDisplay(visit) {
         return
     var displayData = visitInfo.displayData
     var focalplane = displayData.focalplane
-    var stateTable = displayData.stateTable
 
-    updateStateDisplay(stateTable, "run")
-    updateStateDisplay(stateTable, "fail")
-    updateStateDisplay(stateTable, "rescheduled")
-    updateStateDisplay(stateTable, "completed")
-    updateStateDisplay(stateTable, "abandoned")
+    updateStateDisplay(displayData.run, "run")
+    updateStateDisplay(displayData.fail, "fail")
+    updateStateDisplay(displayData.rescheduling, "rescheduling")
+    updateStateDisplay(displayData.completed, "done")
+    updateStateDisplay(displayData.abandoned, "abandoned")
 
     var i = 0
 
@@ -197,22 +196,62 @@ function updateDisplay(visit) {
     }
 }
 
+function updateStateDisplay(_val, _state) {
+    var _div = document.getElementById(_state+"Count")
+
+    if (_val != 0)
+        _div.innerHTML = _val
+}
+
+/*
 function updateStateDisplay(_stateTable, _state) {
     var _div = document.getElementById(_state+"Count")
     if (_stateTable[_state] != null) {
         _div.innerHTML = _stateTable[_state]
     }
 }
+*/
 
 function FocalPlaneData() {
     this.cellName = null
     this.state = null
 }
 
+
 function DisplayData() {
     this.visitName = null
     this.focalplane = new Array()
-    this.stateTable = new Array()
+    this.run = 0
+    this.fail = 0
+    this.rescheduling = 0
+    this.completed = 0
+    this.abandoned = 0
+}
+
+function getStateTableValue(_displayData, _name) {
+    if (_name == "run")
+        return _displayData.run
+    if (_name == "fail")
+        return _displayData.fail
+    if (_name == "rescheduling")
+        return _displayData.rescheduling
+    if (_name == "done")
+        return _displayData.completed
+    if (_name == "abandoned")
+        return _displayData.abandoned
+}
+
+function setStateTableValue(_displayData, _name, _val) {
+    if (_name == "run")
+        _displayData.run = _val
+    else if (_name == "fail")
+        _displayData.fail = _val
+    else if (_name == "rescheduling")
+        _displayData.rescheduling = _val
+    else if (_name == "done")
+        _displayData.completed = _val
+    else if (_name == "abandoned")
+        _displayData.abandoned = _val
 }
 
 function Worker(_id, _visit, _cellName) {
@@ -226,17 +265,19 @@ function updateVisitInfo(_visit, _cellName, _state) {
     var displayData = retVisit.displayData
     if (displayData != null) {
         var focalplane = displayData.focalplane
-        var stateTable = displayData.stateTable
+    
         setFocalPlaneCellState(focalplane, _cellName, _state)
 
-        if (stateTable[_state] == null) {
-            stateTable[_state] = 1
+        var val = getStateTableValue(displayData, _state);
+        if (val == 0) {
+            val = 1
         } else {
-            stateTable[_state] = stateTable[_state]+1
+            val = val+1
         }
+       setStateTableValue(displayData, _state, val)
         if (_displayedVisitId == _visit) {
             var _div = document.getElementById(_state+"Count")
-            _div.innerHTML = stateTable[_state]
+            _div.innerHTML = val
         }
     }
 }
