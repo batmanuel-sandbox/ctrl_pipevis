@@ -199,7 +199,9 @@ function updateDisplay(visit) {
 function updateStateDisplay(_val, _state) {
     var _div = document.getElementById(_state+"Count")
 
-    if (_val != 0)
+    if (_val == 0)
+        _div.innerHTML = "<br>"
+    else
         _div.innerHTML = _val
 }
 
