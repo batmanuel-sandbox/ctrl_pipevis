@@ -5,9 +5,9 @@ import java.util.Set;
 
 import javax.jms.Message;
 
-public class CcdJobMessage extends LsstMessage {
+public class LsstXMLMessage extends LsstMessage {
 
-	public CcdJobMessage(Message msg) {
+	public LsstXMLMessage(Message msg) {
 		super(msg);
 	}
 

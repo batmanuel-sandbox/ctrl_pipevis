@@ -1,146 +1,87 @@
 package lsst.ctrl.pipevis;
 
+import java.util.ArrayList;
 import java.util.Enumeration;
 
-import javax.jms.Connection;
-import javax.jms.Destination;
-import javax.jms.MessageConsumer;
-import javax.jms.MessageProducer;
-import javax.jms.Session;
 import javax.jms.TextMessage;
 
-import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.command.ActiveMQTextMessage;
 
 public class Shuffler implements Runnable {
 
-	private Destination consumerDestination;
-	private Connection consumerConnection;
-	private Session consumerSession;
-	MessageConsumer consumer;
-
-	private Destination producerDestination;
-	private Connection producerConnection;
-	private Session producerSession;
-	MessageProducer producer;
+	ShuffleAgent shufflePair = null;
 
 	public static void main(String[] args) {
-		Shuffler shuffler = new Shuffler("CcdJob", "CcdJob_ajax", "lsst8.ncsa.uiuc.edu", 61616);
+		
+		Shuffler shuffler1 = new Shuffler(new ShuffleAgent("CcdJob", "CcdJob_ajax",
+				"lsst8.ncsa.uiuc.edu", 61616));
 
-		Thread t = new Thread(shuffler);
-		t.run();
-		try {
-			t.join();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
+		Shuffler shuffler2 = new Shuffler(new ShuffleAgent("JobOfficeStatus", "JobOfficeStatus_ajax",
+				"lsst8.ncsa.uiuc.edu", 61616));
 
-	public Shuffler(String topicIn, String topicOut, String brokerHost, int port) {
-		createConsumer(topicIn, brokerHost, port);
-		createProducer(topicOut, brokerHost, port);
-	}
+		ArrayList<Thread> list = new ArrayList<Thread>();
 
-	public void createConsumer(String topic, String host, int port) {
-		String brokerURI = "tcp://" + host + ":" + port
-				+ "?jms.useAsyncSend=true";
 
-		ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(
-				brokerURI);
+		Thread t = new Thread(shuffler1);
+		t.start();
+		list.add(t);
 
-		try {
-			consumerConnection = connectionFactory.createConnection();
 
-			consumerConnection.start();
-
-			consumerSession = consumerConnection.createSession(false,
-					Session.AUTO_ACKNOWLEDGE);
-
-			consumerDestination = consumerSession.createTopic(topic);
-
-			consumer = consumerSession.createConsumer(consumerDestination);
-		} catch (Exception e) {
-			System.err.println(e);
+		Thread t2 = new Thread(shuffler2);
+		t2.start();
+		
+		list.add(t2);
+		
+		
+		for (int i = 0; i < list.size(); i++) {
+			Thread joinThread = (Thread)list.get(i);
+			try {
+				joinThread.join();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 
 	}
 
-	public void createProducer(String topic, String host, int port) {
-		String brokerURI = "tcp://" + host + ":" + port
-				+ "?jms.useAsyncSend=true";
-
-		ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(
-				brokerURI);
-
-		try {
-			producerConnection = connectionFactory.createConnection();
-
-			producerConnection.start();
-
-			producerSession = producerConnection.createSession(false,
-					Session.AUTO_ACKNOWLEDGE);
-
-			producerDestination = producerSession.createTopic(topic);
-
-			producer = producerSession.createProducer(producerDestination);
-
-		} catch (Exception e) {
-			System.err.println(e);
-		}
+	public Shuffler(ShuffleAgent pair) {
+		shufflePair = pair;
 	}
 
 	public void run() {
 		while (true) {
-			try {
-				ActiveMQTextMessage msg = getMessage();
 
-				if (msg == null)
-					return;
+				try {
+					ActiveMQTextMessage msg = shufflePair.getMessage();
 
-				CcdJobMessage lsstMsg = new CcdJobMessage(msg);
+					if (msg == null)
+						return;
 
-				
-//				String payload = "<payload " + lsstMsg.getProperties() + " "+ lsstMsg.getPayload() + "/>";
-				String payload = "<payload>" + lsstMsg.getProperties() + " "+ lsstMsg.getPayload() + "</payload>";
-				System.out.println(payload);
-				TextMessage msg2 = producerSession.createTextMessage();
-				msg2.setText(payload);
-				Enumeration en = msg.getPropertyNames();
+					LsstXMLMessage lsstMsg = new LsstXMLMessage(msg);
 
-				while (en.hasMoreElements()) {
-					String key = (String) en.nextElement();
-					msg2.setObjectProperty(key, msg.getProperty(key));
+					// String payload = "<payload " + lsstMsg.getProperties() +
+					// " "+ lsstMsg.getPayload() + "/>";
+					String payload = "<payload>" + lsstMsg.getProperties()
+							+ " " + lsstMsg.getPayload() + "</payload>";
+					System.out.println(payload);
+					TextMessage msg2 = shufflePair.getProducerSession()
+							.createTextMessage();
+					msg2.setText(payload);
+					Enumeration en = msg.getPropertyNames();
+
+					while (en.hasMoreElements()) {
+						String key = (String) en.nextElement();
+						msg2.setObjectProperty(key, msg.getProperty(key));
+					}
+
+					shufflePair.sendMessage(msg2);
+				} catch (Exception e) {
+					System.out.println(e);
 				}
-
-				sendMessage(msg2);
-			} catch (Exception e) {
-				System.out.println(e);
-			}
 		}
 	}
 
-	/**
-	 * Retrieve the next available message from the Reader's data source
-	 * 
-	 * @return MonitorMessage encapsulating the retrieved message
-	 */
-	public ActiveMQTextMessage getMessage() {
-		ActiveMQTextMessage message = null;
-		try {
-			message = (ActiveMQTextMessage) consumer.receive();
-		} catch (Exception e) {
-			System.err.println(e);
-		}
-		return message;
-	}
 
-	public void sendMessage(TextMessage msg) {
-		try {
-			producer.send(msg);
-		} catch (Exception e) {
-			System.out.println(e);
-		}
-	}
 
 }
