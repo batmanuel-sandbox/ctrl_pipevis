@@ -3,6 +3,8 @@ var workerTable = new Array()
 
 var _displayedVisitId = null
 
+var totalDataCount = 0
+
 var ccdjobHandler = 
 {
   _ccdjob: function(message) 
@@ -81,10 +83,44 @@ var ccdjobHandler =
                 if (_displayedVisitId == _visit)
                     _cell.className = "rescheduling"
                 updateVisitInfo(_visit,_cellName, "rescheduling")
+            } else if (_status == "job:abandoned") {
+                var _identity = getNode(message, "identity")
+                var _ids = getNode(_identity, "ids")
+                var _raft = getMessageTagContents(_ids,"raft")
+                var _sensor = getMessageTagContents(_ids,"sensor")
+                var _visit_raw = getMessageTagContents(_ids,"visit")
+                var _runid = getMessageTagContents(message, "RUNID")
+                var _visit = "Run: "+_runid+" Visit: "+_visit_raw
+
+                var _cellName = _raft+"_"+_sensor
+                var _cell = document.getElementById(_cellName)
+                if (_displayedVisitId == _visit)
+                    _cell.className = "abandoned"
+                updateVisitInfo(_visit,_cellName, "abandoned")
             }
       }
     }
   }
+};
+
+var jobofficeStatusHandler = 
+{
+    _jobofficeStatus: function(message) {
+        if (message != null) {
+            var _type = getMessageTagContents(message, "TYPE")
+
+            if (_type == "_S") {
+                var _originatorid = getMessageTagContents(message, "ORIGINATORID")
+                var _status = getMessageTagContents(message, "STATUS")
+
+                if (_status == "joboffice:datareceived") {
+                    totalDataCount = totalDataCount + 1
+                    var _div = document.getElementById("totalDataCount") 
+                    _div.innerHTML = totalDataCount
+                }
+            }
+        }
+    }
 };
 
 function setWorkerInfo(_destinationId, _visit, _cellName) {
@@ -118,12 +154,14 @@ function setVisit(_visitName, _displayData) {
 
 function getVisit(_visitName) {
 
-    if (visits.length == 0)
+    if (visits.length == 0) {
         return null
+    }
     for (var i = 0; i < visits.length; i++) {
         var storedVisitName = visits[i].visitName
-        if (storedVisitName == _visitName)
+        if (storedVisitName == _visitName) {
             return visits[i]
+        }
     }
     return null
 }
@@ -151,17 +189,24 @@ function setFocalPlaneCellState(_fp, _cellName, _state) {
 }
 
 function getFocalPlaneCellState(_visit, _cellName) {
-    var displayData = getVisit(_visit)
-    if (displayData == null)
+    var visit = getVisit(_visit)
+    var displayData = visit.displayData
+    if (displayData == null) {
         return null
+    }
+
 
     var focalplane = displayData.focalplane
 
+    if (focalplane == null)
+        return null
     for (var i = 0; i < focalplane.length; i++) {
         var fpData = focalplane[i]
-        if (fpData.cellName == _cellName)
-            return focalplane[i].state
+        if (fpData.cellName == _cellName) {
+            return fpData.state
+        }
     }
+
     return null
 }
 
@@ -205,15 +250,6 @@ function updateStateDisplay(_val, _state) {
         _div.innerHTML = _val
 }
 
-/*
-function updateStateDisplay(_stateTable, _state) {
-    var _div = document.getElementById(_state+"Count")
-    if (_stateTable[_state] != null) {
-        _div.innerHTML = _stateTable[_state]
-    }
-}
-*/
-
 function FocalPlaneData() {
     this.cellName = null
     this.state = null
@@ -244,9 +280,9 @@ function getStateTableValue(_displayData, _name) {
 }
 
 function setStateTableValue(_displayData, _name, _val) {
-    if (_name == "run")
+    if (_name == "run") {
         _displayData.run = _val
-    else if (_name == "fail")
+    } else if (_name == "fail")
         _displayData.fail = _val
     else if (_name == "rescheduling")
         _displayData.rescheduling = _val
@@ -268,9 +304,25 @@ function updateVisitInfo(_visit, _cellName, _state) {
     if (displayData != null) {
         var focalplane = displayData.focalplane
     
+
+        var cur_state = getFocalPlaneCellState(_visit, _cellName)
+
+        if (cur_state == "run") {
+            var cur_val = getStateTableValue(displayData, cur_state)
+            cur_val = cur_val - 1
+            setStateTableValue(displayData, cur_state, cur_val)
+            if (_displayedVisitId == _visit) {
+                var _div = document.getElementById(cur_state+"Count")
+                if (cur_val == 0)
+                    _div.innerHTML = "<br>"
+                else
+                    _div.innerHTML = cur_val
+            }
+        }
+
         setFocalPlaneCellState(focalplane, _cellName, _state)
 
-        var val = getStateTableValue(displayData, _state);
+        var val = getStateTableValue(displayData, _state)
         if (val == 0) {
             val = 1
         } else {
@@ -325,6 +377,7 @@ function getNode(message, tag) {
 
 function getMessageTagContents(message, tag) {
     var _foo = message.getElementsByTagName(tag)
+
     if (_foo != undefined) {
         var _foo_value = _foo[0].childNodes[0].nodeValue
         return _foo_value
@@ -339,8 +392,17 @@ function ccdjobPoll(first)
      amq.addListener('joboffice','topic://CcdJob_ajax',ccdjobHandler._ccdjob);
    }
 }
+function jobofficeStatusPoll(first)
+{
+   if (first)
+   {
+     amq.addListener('jobofficeStatus','topic://JobOfficeStatus_ajax',jobofficeStatusHandler._jobofficeStatus);
+   }
+}
+
 
 amq.addPollHandler(ccdjobPoll);
+amq.addPollHandler(jobofficeStatusPoll);
 
 
 /**
