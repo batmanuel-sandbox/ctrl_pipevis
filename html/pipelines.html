@@ -38,13 +38,12 @@ Focal Plane
 <td><table class="border_grid">
 <tr><th>State</th><th>Key</th><th>Total</th></tr>
 <tr><td>Running</td><td class="run"><br></td><td id="runCount"><br></td></tr>
-<tr><td>Failed</td><td class="fail"><br></td><td id="failCount"><br></td></tr>
 <tr><td>Rescheduled</td><td class="rescheduling"><br></td><td id="reschedulingCount"><br></td></tr>
 <tr><td>Completed</td><td class="done"><br></td><td id="doneCount"><br></td><tr>
 <tr><td>Abandoned</td><td class="abandoned"><br></td><td id="abandonedCount"><br></td><tr>
-<tr><td>Total Count</td><td class="abandoned"><br></td><td id="totalDataCount"><br></td><tr>
 </table></td>
 </tr>
+
 </table>
 </TD>
 <TD>
@@ -59,5 +58,18 @@ document.write(table_var)
 </TR>
 
 </TABLE>
+<h3>Stats:</h3>
+<table>
+<tr><td>Visit - CCD Total:<td><td id="visitDataCount"><br></td></tr>
+<tr><td>Visit - Percent Complete:<td><td id="visitPercentComplete"><br></td></tr>
+<tr><td>Visit - Percent Abandoned:<td><td id="visitPercentAbandoned"><br></td></tr>
+<tr><td<br></td><td><br></td></tr>
+<tr><td>Run-id - CCD Total :<td><td id="runidDataCount"><br></td></tr>
+<tr><td>Run-id - Percent Complete:<td><td id="runidPercentComplete"><br></td></tr>
+<tr><td>Run-id - Percent Abandoned:<td><td id="runidPercentAbandoned"><br></td></tr>
+</table>
+</td>
+</tr>
+
 </body>
 </html>

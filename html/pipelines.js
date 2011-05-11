@@ -5,6 +5,8 @@ var _displayedVisitId = null
 
 var totalDataCount = 0
 
+var runids = new Array()
+
 var ccdjobHandler = 
 {
   _ccdjob: function(message) 
@@ -43,6 +45,7 @@ var ccdjobHandler =
       } else if (_type == "_S") {
             var _originatorid = getMessageTagContents(message, "ORIGINATORID")
             var _status = getMessageTagContents(message, "STATUS")
+            var _runid = getMessageTagContents(message, "RUNID")
             if (_status == "job:done") {
                 var worker = getWorkerInfo(_originatorid)
                 // if worker is null, we never saw the command for it
@@ -59,14 +62,15 @@ var ccdjobHandler =
                 else {
                     var _success = getMessageTagContents(message, "success")
                     var _state = null
-                    if (_success == "true")
+                    if (_success == "true") {
                         _state = "done"
-                    else
+                    } else
                         _state = "fail"
                         
                     
                     if (_displayedVisitId == _visit)
                         _cell.className = _state
+                    updateRunidInfo(_runid, _state)
                     updateVisitInfo(_visit, _cellName, _state)
                 }
             } else if (_status == "job:rescheduling") {
@@ -96,6 +100,7 @@ var ccdjobHandler =
                 var _cell = document.getElementById(_cellName)
                 if (_displayedVisitId == _visit)
                     _cell.className = "abandoned"
+                updateRunidInfo(_runid, "abandoned")
                 updateVisitInfo(_visit,_cellName, "abandoned")
             }
       }
@@ -103,25 +108,62 @@ var ccdjobHandler =
   }
 };
 
-var jobofficeStatusHandler = 
+var rawCcdAvailableHandler = 
 {
-    _jobofficeStatus: function(message) {
+    _rawCcdAvailable: function(message) {
         if (message != null) {
+
+            updateVisit(message)
+
             var _type = getMessageTagContents(message, "TYPE")
 
             if (_type == "_S") {
                 var _originatorid = getMessageTagContents(message, "ORIGINATORID")
                 var _status = getMessageTagContents(message, "STATUS")
 
-                if (_status == "joboffice:datareceived") {
-                    totalDataCount = totalDataCount + 1
-                    var _div = document.getElementById("totalDataCount") 
-                    _div.innerHTML = totalDataCount
+                if (_status == "available") {
+                    updateIncomingDataInfo(message)
                 }
             }
         }
     }
 };
+
+function updateIncomingDataInfo(message) {
+    var _identity = getNode(message, "dataset")
+    //var _raft = getMessageTagConents(_identity,"raft")
+    var _ids = getNode(_identity, "ids")
+    var _visit_raw = getMessageTagContents(_ids,"visit")
+    var _runid = getMessageTagContents(message, "RUNID")
+    var _visit = "Run: "+_runid+" Visit: "+_visit_raw
+
+   
+    var visit = getVisit(_visit)
+    if (visit == null) {
+        setVisit(_runid, _visit, new DisplayData())
+        visit = getVisit(_visit)
+    }
+        
+    var displayData = visit.displayData
+    if (displayData == null) {
+        return null
+    }
+
+    var runidEntry = getRunidInfo(_runid)
+    if (runidEntry == null) {
+        runidEntry = new RunidInfo(_runid)
+        setRunidInfo(runidEntry)
+        updateStateDisplay("0.00%", "runidPercentComplete")
+        updateStateDisplay("0.00%", "runidPercentAbandoned")
+    }
+
+    
+    runidEntry.totalJobs = runidEntry.totalJobs + 1
+    displayData.visitDataCount = displayData.visitDataCount + 1
+    updateVisitStats(displayData)
+//    var _div = document.getElementById("totalDataCount") 
+//    _div.innerHTML = displayData.totalDataCount
+}
 
 function setWorkerInfo(_destinationId, _visit, _cellName) {
     for (var i = 0; i < workerTable.length; i++) {
@@ -143,13 +185,14 @@ function getWorkerInfo(_id) {
     return null;
 }
 
-function VisitInfo(_visitName, _displayData) {
+function VisitInfo(_runid, _visitName, _displayData) {
+   this.runid = _runid
    this.visitName = _visitName
    this.displayData = _displayData
 }
 
-function setVisit(_visitName, _displayData) {
-    visits.push(new VisitInfo(_visitName, _displayData))
+function setVisit(_runid, _visitName, _displayData) {
+    visits.push(new VisitInfo(_runid, _visitName, _displayData))
 }
 
 function getVisit(_visitName) {
@@ -161,6 +204,29 @@ function getVisit(_visitName) {
         var storedVisitName = visits[i].visitName
         if (storedVisitName == _visitName) {
             return visits[i]
+        }
+    }
+    return null
+}
+
+function RunidInfo(_runid) {
+    this.runid = _runid
+    this.totalJobs = 0
+    this.completeCount = 0
+    this.abandonedCount = 0
+}
+
+function setRunidInfo(_runidInfo) {
+    runids.push(_runidInfo)
+}
+
+function getRunidInfo(_runid) {
+    if (runids.length == 0)
+        return null
+    for (var i = 0; i < runids.length; i++) {
+        var storedRunid = runids[i].runid
+        if (storedRunid == _runid) {
+            return runids[i]
         }
     }
     return null
@@ -210,6 +276,39 @@ function getFocalPlaneCellState(_visit, _cellName) {
     return null
 }
 
+function updateStatistics(_visitInfo) {
+
+    var displayData = _visitInfo.displayData
+    var runid = _visitInfo.runid
+    if (displayData == undefined)
+        return
+
+    var _visitDataCount = displayData.visitDataCount
+    var _totalRunCount = displayData.totalRunCount
+    var _rescheduling = displayData.rescheduling
+    var _completed = displayData.completed
+    var _abandoned = displayData.abandoned
+
+    updateStateDisplay(displayData.run, "runCount")
+    //updateStateDisplay(displayData.fail, "fail")
+    updateStateDisplay(_rescheduling, "reschedulingCount")
+    updateStateDisplay(_completed, "doneCount")
+    updateStateDisplay(_abandoned, "abandonedCount")
+    
+    updateStateDisplay(_visitDataCount, "visitDataCount")
+    updateStateDisplay(displayData.totalRunCount, "totalVisitCCDRunAttempts")
+
+    updateStatePercentDisplay(_completed, _visitDataCount, "visitPercentComplete")
+        
+    // updateStatePercentDisplay(_rescheduling, _totalRunCount, "visitPercentRescheduled")
+
+    updateStatePercentDisplay(_abandoned, _visitDataCount, "visitPercentAbandoned")
+    var runidEntry = getRunidInfo(runid)
+    if (runidEntry == null) 
+        return
+    updateStateDisplay(runidEntry.totalJobs, "runidDataCount")
+}
+
 function updateDisplay(visit) {
     
     _displayedVisitId = visit
@@ -219,16 +318,14 @@ function updateDisplay(visit) {
     updateVisitHeader(visit)
 
     var visitInfo = getVisit(visit)
-    if (visitInfo == null)
+    if (visitInfo == null) {
+        alert("visitInfo was null")
         return
+    }
     var displayData = visitInfo.displayData
     var focalplane = displayData.focalplane
+    updateStatistics(visitInfo)
 
-    updateStateDisplay(displayData.run, "run")
-    updateStateDisplay(displayData.fail, "fail")
-    updateStateDisplay(displayData.rescheduling, "rescheduling")
-    updateStateDisplay(displayData.completed, "done")
-    updateStateDisplay(displayData.abandoned, "abandoned")
 
     var i = 0
 
@@ -241,8 +338,23 @@ function updateDisplay(visit) {
     }
 }
 
+function updateVisitStats(displayData) {
+    updateStateDisplay(displayData.visitDataCount, "visitDataCount")
+}
+
+function updateStatePercentDisplay(_val, _total, _state) {
+    if (_total != 0) {
+        var _percent = (_val/_total) * 100
+        _percent = _percent.toFixed(2) + "%"
+        updateStateDisplay(_percent, _state)
+    } else
+        updateStateDisplay("0.00%", _state)
+}
+
 function updateStateDisplay(_val, _state) {
-    var _div = document.getElementById(_state+"Count")
+    var _div = document.getElementById(_state)
+    if (_div == undefined)
+       return
 
     if (_val == 0)
         _div.innerHTML = "<br>"
@@ -264,6 +376,8 @@ function DisplayData() {
     this.rescheduling = 0
     this.completed = 0
     this.abandoned = 0
+    this.totalRunCount = 0
+    this.visitDataCount = 0
 }
 
 function getStateTableValue(_displayData, _name) {
@@ -298,6 +412,21 @@ function Worker(_id, _visit, _cellName) {
     this.cellName = _cellName
 }
 
+function updateRunidInfo(_runid, _state) {
+    runidInfo = getRunidInfo(_runid)
+    if (runidInfo == null)
+        return
+    if (_state == "done") {
+        runidInfo.completeCount = runidInfo.completeCount  + 1
+        if (runidInfo.totalJobs > 0) 
+            updateStatePercentDisplay(runidInfo.completeCount,runidInfo.totalJobs, "runidPercentComplete")
+    } else if (_state == "abandoned") {
+        runidInfo.abandonedCount = runidInfo.abandonedCount + 1
+        if (runidInfo.totalJobs > 0) 
+            updateStatePercentDisplay(runidInfo.abandonedCount,runidInfo.totalJobs, "runidPercentAbandoned")
+    }
+}
+
 function updateVisitInfo(_visit, _cellName, _state) {
     var retVisit = getVisit(_visit)
     var displayData = retVisit.displayData
@@ -323,6 +452,7 @@ function updateVisitInfo(_visit, _cellName, _state) {
         setFocalPlaneCellState(focalplane, _cellName, _state)
 
         var val = getStateTableValue(displayData, _state)
+        displayData.totalRunCount = displayData.totalRunCount + 1
         if (val == 0) {
             val = 1
         } else {
@@ -331,16 +461,28 @@ function updateVisitInfo(_visit, _cellName, _state) {
        setStateTableValue(displayData, _state, val)
         if (_displayedVisitId == _visit) {
             var _div = document.getElementById(_state+"Count")
-            _div.innerHTML = val
+            if (_div != undefined)
+                _div.innerHTML = val
         }
     }
+    if (_displayedVisitId == _visit)
+        updateStatistics(retVisit)
 }
 
 function getVisitId(message) {
     var _identity = getNode(message, "identity")
-    var _ids = getNode(_identity, "ids")
-    var _visit = getMessageTagContents(_ids,"visit")
-    return _visit
+    if (_identity != null) {
+            var _ids = getNode(_identity, "ids")
+            var _visit = getMessageTagContents(_ids,"visit")
+            return _visit
+    }
+    var _dataset = getNode(message, "dataset")
+    if (_dataset != null) {
+            var _ids = getNode(_dataset, "ids")
+            var _visit = getMessageTagContents(_ids,"visit")
+            return _visit
+    }
+    return null
 }
 
 function updateVisit(message) {
@@ -352,9 +494,7 @@ function updateVisit(message) {
     var _displayData = getVisit(_visit)
 
     if (_displayData == null) {
-
-        
-        setVisit(_visit, new DisplayData())
+        setVisit(_runid, _visit, new DisplayData())
         list.options.add(new Option(_visit, _visit))
     }
 }
@@ -392,17 +532,20 @@ function ccdjobPoll(first)
      amq.addListener('joboffice','topic://CcdJob_ajax',ccdjobHandler._ccdjob);
    }
 }
-function jobofficeStatusPoll(first)
+
+function rawCcdAvailablePoll(first)
 {
    if (first)
    {
-     amq.addListener('jobofficeStatus','topic://JobOfficeStatus_ajax',jobofficeStatusHandler._jobofficeStatus);
+     amq.addListener('rawCcdAvailable','topic://RawCcdAvailable_ajax',rawCcdAvailableHandler._rawCcdAvailable);
    }
 }
 
-
 amq.addPollHandler(ccdjobPoll);
+/*
 amq.addPollHandler(jobofficeStatusPoll);
+*/
+amq.addPollHandler(rawCcdAvailablePoll);
 
 
 /**
