@@ -15,7 +15,7 @@ public class LsstXMLMessage extends LsstMessage {
 		String s = "";
 		Set<String> set = map.keySet();
 		for (String key : set) {
-			if (key.equals("identity") || key.equals("outputs") || key.equals("inputs")) {
+			if (key.equals("identity") || key.equals("outputs") || key.equals("inputs") || key.equals("dataset")) {
 				s = s + parseList(key);
 			} else {
 				List list = (List) map.getList(key);
