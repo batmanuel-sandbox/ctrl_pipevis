@@ -2,6 +2,7 @@ var visits = new Array()
 var workerTable = new Array()
 
 var _displayedVisitId = null
+var _displayedRunid = null
 
 var totalDataCount = 0
 
@@ -26,8 +27,9 @@ var ccdjobHandler =
           var _visit = "Run: "+_runid+" Visit: "+_visit_raw
           // only change the display header if this is the first time through
           if (_displayedVisitId == null) {
-            _displayedVisitId = _visit;
-            updateVisitHeader(_visit);
+            _displayedVisitId = _visit
+            _displayedRunid = _runid
+            updateVisitHeader(_visit)
           }
 
           var _cellName = _raft+"_"+_sensor
@@ -64,8 +66,9 @@ var ccdjobHandler =
                     var _state = null
                     if (_success == "true") {
                         _state = "done"
-                    } else
+                    } else {
                         _state = "fail"
+                    }
                         
                     
                     if (_displayedVisitId == _visit)
@@ -276,7 +279,7 @@ function getFocalPlaneCellState(_visit, _cellName) {
     return null
 }
 
-function updateStatistics(_visitInfo) {
+function updateStatistics(_visitInfo, _displayedRunid) {
 
     var displayData = _visitInfo.displayData
     var runid = _visitInfo.runid
@@ -295,18 +298,27 @@ function updateStatistics(_visitInfo) {
     updateStateDisplay(_completed, "doneCount")
     updateStateDisplay(_abandoned, "abandonedCount")
     
+    updateStateDisplay(_completed, "visitCompleted")
     updateStateDisplay(_visitDataCount, "visitDataCount")
-    updateStateDisplay(displayData.totalRunCount, "totalVisitCCDRunAttempts")
 
     updateStatePercentDisplay(_completed, _visitDataCount, "visitPercentComplete")
         
     // updateStatePercentDisplay(_rescheduling, _totalRunCount, "visitPercentRescheduled")
 
+    updateStateDisplay(_abandoned, "visitAbandoned")
     updateStatePercentDisplay(_abandoned, _visitDataCount, "visitPercentAbandoned")
-    var runidEntry = getRunidInfo(runid)
-    if (runidEntry == null) 
-        return
-    updateStateDisplay(runidEntry.totalJobs, "runidDataCount")
+
+    if (runid == _displayedRunid) {
+        var runidEntry = getRunidInfo(runid)
+        if (runidEntry == null) 
+            return
+
+        updateStateDisplay(runidEntry.totalJobs, "runidDataCount")
+        updateStateDisplay(runidEntry.completeCount,"runidComplete")
+        updateStateDisplay(runidEntry.abandonedCount,"runidAbandoned")
+        updateStatePercentDisplay(runidEntry.completeCount,runidEntry.totalJobs, "runidPercentComplete")
+        updateStatePercentDisplay(runidEntry.abandonedCount,runidEntry.totalJobs, "runidPercentAbandoned")
+    }
 }
 
 function updateDisplay(visit) {
@@ -324,7 +336,7 @@ function updateDisplay(visit) {
     }
     var displayData = visitInfo.displayData
     var focalplane = displayData.focalplane
-    updateStatistics(visitInfo)
+    updateStatistics(visitInfo, getRunidFromString(visit))
 
 
     var i = 0
@@ -418,12 +430,18 @@ function updateRunidInfo(_runid, _state) {
         return
     if (_state == "done") {
         runidInfo.completeCount = runidInfo.completeCount  + 1
-        if (runidInfo.totalJobs > 0) 
-            updateStatePercentDisplay(runidInfo.completeCount,runidInfo.totalJobs, "runidPercentComplete")
+        if (_runid == _displayedRunid) {
+            updateStateDisplay(runidInfo.completeCount, "runidComplete")
+            if (runidInfo.totalJobs > 0) 
+                updateStatePercentDisplay(runidInfo.completeCount,runidInfo.totalJobs, "runidPercentComplete")
+        }
     } else if (_state == "abandoned") {
         runidInfo.abandonedCount = runidInfo.abandonedCount + 1
-        if (runidInfo.totalJobs > 0) 
-            updateStatePercentDisplay(runidInfo.abandonedCount,runidInfo.totalJobs, "runidPercentAbandoned")
+        if (_runid == _displayedRunid) {
+            updateStateDisplay(runidInfo.abandonedCount, "runidAbandoned")
+            if (runidInfo.totalJobs > 0) 
+                updateStatePercentDisplay(runidInfo.abandonedCount,runidInfo.totalJobs, "runidPercentAbandoned")
+        }
     }
 }
 
@@ -466,7 +484,14 @@ function updateVisitInfo(_visit, _cellName, _state) {
         }
     }
     if (_displayedVisitId == _visit)
-        updateStatistics(retVisit)
+        updateStatistics(retVisit, getRunidFromString(_visit))
+}
+
+function getRunidFromString(_visit) {
+    // Assumes "Run: " is the first part of the string
+    var a = _visit.indexOf(" ",5)   
+    var sub = _visit.substring(5,a)
+    return sub
 }
 
 function getVisitId(message) {
