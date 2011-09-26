@@ -19,7 +19,7 @@ public class Shuffler implements Runnable {
 		Shuffler shuffler2 = new Shuffler(new ShuffleAgent("JobOfficeStatus", "JobOfficeStatus_ajax",
 				"lsst8.ncsa.uiuc.edu", 61616));
 
-		Shuffler shuffler3 = new Shuffler(new ShuffleAgent("RawCcdAvailable", "RawCcdAvailable_ajax",
+		Shuffler shuffler3 = new Shuffler(new ShuffleAgent("RawAvailable", "RawCcdAvailable_ajax",
 				"lsst8.ncsa.uiuc.edu", 61616));
 		
 		ArrayList<Thread> list = new ArrayList<Thread>();
@@ -68,10 +68,9 @@ public class Shuffler implements Runnable {
 					
 
 					String runid = (String) msg.getProperty("RUNID");
-/*
-					if (runid.startsWith("srp") == false)
-						continue;
-*/			
+
+					
+
 
 					LsstXMLMessage lsstMsg = new LsstXMLMessage(msg);
 
