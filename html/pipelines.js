@@ -152,6 +152,11 @@ function updateIncomingDataInfo(message) {
         return null
     }
 
+    if (_displayedVisitId == null) {
+        _displayedVisitId = _visit
+        updateVisitHeader(_visit)
+    }
+
     var runidEntry = getRunidInfo(_runid)
     if (runidEntry == null) {
         runidEntry = new RunidInfo(_runid)
@@ -163,7 +168,8 @@ function updateIncomingDataInfo(message) {
     
     runidEntry.totalJobs = runidEntry.totalJobs + 1
     displayData.visitDataCount = displayData.visitDataCount + 1
-    updateVisitStats(displayData)
+    updateStatistics(_visit, _runid)
+//    updateVisitStats(displayData)
 //    var _div = document.getElementById("totalDataCount") 
 //    _div.innerHTML = displayData.totalDataCount
 }
@@ -279,34 +285,37 @@ function getFocalPlaneCellState(_visit, _cellName) {
     return null
 }
 
-function updateStatistics(_visitInfo, _displayedRunid) {
+function updateStatistics(_visit, _displayedRunid) {
+    var _visitInfo = getVisit(_visit)
 
     var displayData = _visitInfo.displayData
     var runid = _visitInfo.runid
     if (displayData == undefined)
         return
 
-    var _visitDataCount = displayData.visitDataCount
-    var _totalRunCount = displayData.totalRunCount
-    var _rescheduling = displayData.rescheduling
-    var _completed = displayData.completed
-    var _abandoned = displayData.abandoned
+    if (_visit == _displayedVisitId) {
+            var _visitDataCount = displayData.visitDataCount
+            var _totalRunCount = displayData.totalRunCount
+            var _rescheduling = displayData.rescheduling
+            var _completed = displayData.completed
+            var _abandoned = displayData.abandoned
 
-    updateStateDisplay(displayData.run, "runCount")
-    //updateStateDisplay(displayData.fail, "fail")
-    updateStateDisplay(_rescheduling, "reschedulingCount")
-    updateStateDisplay(_completed, "doneCount")
-    updateStateDisplay(_abandoned, "abandonedCount")
+            updateStateDisplay(displayData.run, "runCount")
+            updateStateDisplay(displayData.fail, "failCount")
+            updateStateDisplay(_rescheduling, "reschedulingCount")
+            updateStateDisplay(_completed, "doneCount")
+            updateStateDisplay(_abandoned, "abandonedCount")
     
-    updateStateDisplay(_completed, "visitCompleted")
-    updateStateDisplay(_visitDataCount, "visitDataCount")
+            updateStateDisplay(_completed, "visitCompleted")
+            updateStateDisplay(_visitDataCount, "visitDataCount")
 
-    updateStatePercentDisplay(_completed, _visitDataCount, "visitPercentComplete")
+            updateStatePercentDisplay(_completed, _visitDataCount, "visitPercentComplete")
         
-    // updateStatePercentDisplay(_rescheduling, _totalRunCount, "visitPercentRescheduled")
+            // updateStatePercentDisplay(_rescheduling, _totalRunCount, "visitPercentRescheduled")
 
-    updateStateDisplay(_abandoned, "visitAbandoned")
-    updateStatePercentDisplay(_abandoned, _visitDataCount, "visitPercentAbandoned")
+            updateStateDisplay(_abandoned, "visitAbandoned")
+            updateStatePercentDisplay(_abandoned, _visitDataCount, "visitPercentAbandoned")
+    }
 
     if (runid == _displayedRunid) {
         var runidEntry = getRunidInfo(runid)
@@ -336,7 +345,8 @@ function updateDisplay(visit) {
     }
     var displayData = visitInfo.displayData
     var focalplane = displayData.focalplane
-    updateStatistics(visitInfo, getRunidFromString(visit))
+    _displayedRunid = getRunidFromString(visit)
+    updateStatistics(visit, _displayedRunid)
 
 
     var i = 0
@@ -369,7 +379,7 @@ function updateStateDisplay(_val, _state) {
        return
 
     if (_val == 0)
-        _div.innerHTML = "<br>"
+        _div.innerHTML = "0"
     else
         _div.innerHTML = _val
 }
@@ -452,17 +462,22 @@ function updateVisitInfo(_visit, _cellName, _state) {
         var focalplane = displayData.focalplane
     
 
+        // decrement the run and rescheduling count, if we're working on that.
         var cur_state = getFocalPlaneCellState(_visit, _cellName)
 
-        if (cur_state == "run") {
+        if ((cur_state == "run") || (cur_state == "rescheduling") || (cur_state == "fail")) {
             var cur_val = getStateTableValue(displayData, cur_state)
             cur_val = cur_val - 1
+            if (cur_val < 0)
+                cur_val = 0
             setStateTableValue(displayData, cur_state, cur_val)
             if (_displayedVisitId == _visit) {
                 var _div = document.getElementById(cur_state+"Count")
+/*
                 if (cur_val == 0)
                     _div.innerHTML = "<br>"
                 else
+*/
                     _div.innerHTML = cur_val
             }
         }
@@ -484,7 +499,7 @@ function updateVisitInfo(_visit, _cellName, _state) {
         }
     }
     if (_displayedVisitId == _visit)
-        updateStatistics(retVisit, getRunidFromString(_visit))
+        updateStatistics(_visit, getRunidFromString(_visit))
 }
 
 function getRunidFromString(_visit) {
